@@ -7,7 +7,8 @@ language: bg
 date: 2005-12-09
 last_amended: 2026-09-24
 version_in_force_from: 2026-09-24
-status: unknown
+in_force_until: 2027-08-09
+status: in_force
 source: "https://legislation.apis.bg/doc/202063/0/"
 apis_id: 202063
 retrieved: 2026-10-12

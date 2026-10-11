@@ -7,6 +7,7 @@ language: bg
 date: 2015-12-08
 last_amended: 2026-07-24
 version_in_force_from: 2026-07-28
+in_force_until: 2026-03-10
 status: unknown
 source: "https://legislation.apis.bg/doc/2707582/0/"
 apis_id: 2707582
