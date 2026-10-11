@@ -309,14 +309,18 @@ def heading_kind(text):
     return "top"
 
 
-CAPTION_RE = re.compile(r'<span class="par-caption">(.*?)</span>', re.S)
+CAPTION_RE = re.compile(r'<span class="par-caption">(.*?)</span>(\s*\.(?!\.))?', re.S)
+
+
+def is_heading(p):
+    return p["type"] in (1, 2, 3, 4) or re.match(r"\s*<h\d", p["text"]) is not None
 
 
 def split_caption(fragment):
     m = CAPTION_RE.search(fragment)
     if not m:
         return None, fragment
-    cap = plain(m.group(1))
+    cap = plain(m.group(1)) + (".") if m.group(2) else plain(m.group(1))
     rest = fragment[: m.start()] + fragment[m.end():]
     return cap, rest
 
@@ -328,7 +332,7 @@ def convert_doc(meta, folder_id, paragraphs, retrieved):
     # structure detection
     present = set()
     for p in paragraphs:
-        if p["type"] in (1, 4):
+        if is_heading(p):
             parts = heading_parts(p["text"])
             if parts:
                 k = heading_kind(parts[0])
@@ -355,7 +359,7 @@ def convert_doc(meta, folder_id, paragraphs, retrieved):
             history = plain(txt)
             body.append(esc_line_start(history))
             continue
-        if t in (1, 4):
+        if is_heading(p):
             parts = heading_parts(txt)
             if not parts:
                 continue
@@ -401,7 +405,7 @@ def convert_doc(meta, folder_id, paragraphs, retrieved):
             continue
         # article / paragraph / annex text (type 11 and others)
         cap, rest = split_caption(txt)
-        if cap and ft == 10:
+        if cap and ft == 10 and re.match(r"(?i)^(приложение|таблица|образец|списък)", cap):
             # annex: caption + following text lines form the heading block
             root = parse(rest)
             blocks = render_blocks(root)
@@ -419,10 +423,17 @@ def convert_doc(meta, folder_id, paragraphs, retrieved):
                 pending_title = None
             body.extend(render_blocks(parse(rest)))
             continue
-        if pending_title:
+        blocks = render_blocks(parse(txt))
+        m = re.match(r"^((?:Чл\.|§)\s*\d+[а-я]?\.)\s*(.*)$", blocks[0], re.S) if blocks else None
+        if m and ft != 10:
+            body.append(f"**{m.group(1)}**" if art_bold else f"{hl(art_level)} {m.group(1)}")
+            if pending_title:
+                body.append(f"*{pending_title}*")
+                pending_title = None
+            blocks = ([m.group(2)] if m.group(2).strip() else []) + blocks[1:]
+        elif pending_title:
             body.append(f"*{pending_title}*")
             pending_title = None
-        blocks = render_blocks(parse(txt))
         body.extend(blocks)
 
     # front matter
